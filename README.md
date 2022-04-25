@@ -36,15 +36,15 @@ Download the dataset (e.g., `EG`) from the given link and store them in `data` f
 ```
 
 ### Training and testing
-Please run following commands for training and testing under `src` folder. We take the dataset `EG` as the example.
+Please run following commands for training and testing under the `src` folder. We take the dataset `EG` as the example.
 
 **Evaluate the event prediction model**
 ```python
-python train_pred.py -sl 7 -s -m cmf -ho 1 --gpu 1 -d gdelt_EG_city_b -hd 32 -nl 2 -td 64 --eid 13 --lr 0.003 -w -l 5
+python train_pred.py -sl 7 -s -m cmf -ho 1 --gpu 1 -d EG -hd 32 -nl 2 -td 64 --eid 13 --lr 0.003 -w -l 5
 ```
 **Evaluate the event prediction and explanation model**
 ```python
-python train_pred_exp.py -sl 7 -s -m cmf -ho 1 --gpu 1 -d gdelt_EG_city_b -hd 32 -nl 2 -td 64 --eid 13 --lr 0.003 -w -l 1
+python train_pred_exp.py -sl 7 -s -m cmf -ho 1 --gpu 1 -d EG -hd 32 -nl 2 -td 64 --eid 13 --lr 0.003 -w -l 1
 ```
 
 ## Cite

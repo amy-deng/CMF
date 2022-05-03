@@ -181,7 +181,8 @@ class CMF(nn.Module):
         if self.multiclass:
             _, pred_label = torch.max(pred, dim = -1)
             _, x_pred_label = torch.max(x_pred, dim = -1)
-            loss = - mutual_infomation_loss(pred_label, x_pred_label)  
+            loss = - mutual_information(pred_label, x_pred_label)  
+            # loss = - mutual_infomation_loss(pred_label, x_pred_label)  
             
             r['label'] = 'multiclass'
             r['pred'] = pred
@@ -196,7 +197,8 @@ class CMF(nn.Module):
             x_pred_label = (x_pred > 0.5).float() * 1
             x = pred_label[:,label_idx]
             y1 = x_pred_label[:,label_idx]
-            loss = - mutual_infomation_loss(x, y1)  
+            loss = - mutual_information(x, y1) # + doc_entropy + evt_entropy
+            # loss = - mutual_infomation_loss(x, y1)  
 
             r['label'] = 'multilabel' + str(label_idx)
             r['pred'] = pred[:,label_idx]

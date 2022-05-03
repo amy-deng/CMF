@@ -11,7 +11,6 @@ We processed some country based datasets from the ICEWS data. Please find exampl
 - `data_label.pkl` location, time, etc.
 - `data_graph.bin` DGL graphs.
 - `loc_text_emb.pkl` document embeddings.
-- `loc_text_emb_list.pkl` a list of sentence embeddings for each document.
 
 ## Prerequisites
 The code has been successfully tested in the following environment. (For older dgl versions, you may need to modify the code)

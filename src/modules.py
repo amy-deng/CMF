@@ -11,56 +11,7 @@ import time
 from collections import Counter
 from sparsemax import *
 
- 
-
-class DocEmbLearning(nn.Module): # memory issue
-    def __init__(self, h_dim, emb_dim, dropout, seq_len=10, device=torch.device('cpu') ):
-        super().__init__()
-        self.h_dim = h_dim  # feature
-        self.emb_dim = emb_dim
-        # self.sent_learning = nn.LSTM(emb_dim, h_dim, batch_first=True, num_layers=1, bidirectional=True)
-        self.sent_learning = nn.GRU(emb_dim, h_dim, batch_first=True, num_layers=1, bidirectional=True)
-        self.out_layer = nn.Linear(2*h_dim, h_dim)
-        self.device = device
-
-    def forward(self, doc_emb_list):
-        maxlen = 20
-        # all_
-        sent_embs_tensor = torch.zeros(len(doc_emb_list), maxlen, self.emb_dim)
-        len_non_zero = []
-        for i, emb in enumerate(doc_emb_list):
-            length = len(emb)
-            len_non_zero.append(length)
-            sent_embs_tensor[i, range(length), :] = torch.FloatTensor(emb)
-        
-        sent_embs_tensor = sent_embs_tensor.to(self.device)
-        packed_input = torch.nn.utils.rnn.pack_padded_sequence(sent_embs_tensor,
-                                                            len_non_zero,
-                                                            batch_first=True,
-                                                            enforce_sorted=False)
-        output, hn = self.sent_learning(packed_input) 
-        hn = hn.permute(1,0,2).contiguous()
-        sent_embs_learned = hn.view(hn.size(0), -1)
-        sent_embs_learned = self.out_layer(sent_embs_learned)
-        return sent_embs_learned
-
-class DocEmbAverage(nn.Module):
-    def __init__(self, h_dim, emb_dim, dropout, seq_len=10, device=torch.device('cpu') ):
-        super().__init__()
-        self.h_dim = h_dim  # feature
-        self.emb_dim = emb_dim
-        self.out_layer = nn.Linear(emb_dim, h_dim)
-        self.device = device
-
-    def forward(self, doc_emb_list):
-        maxlen = 20
-        sent_embs_tensor = torch.zeros(len(doc_emb_list), self.emb_dim)
-        for i, emb in enumerate(doc_emb_list):
-            sent_embs_tensor[i, :] = torch.from_numpy(emb.mean(0))
-        sent_embs_learned = self.out_layer(sent_embs_tensor.to(self.device))
-        return sent_embs_learned
-
- 
+  
 class multilevel_learning(nn.Module):
     def __init__(self, h_dim, emb_dim, dropout, num_nodes, num_rels, seq_len=10, 
     maxpool=1, attn='', n_label=20, device=torch.device('cpu'), multiclass=False, 
@@ -82,11 +33,6 @@ class multilevel_learning(nn.Module):
             self.n_label = 1
         self.emb_mod = emb_mod
         self.learned_emb_dim = emb_dim
-        if emb_mod == 'lstm':
-            self.DocEmbLearning = DocEmbLearning(h_dim, emb_dim, dropout, seq_len, device)
-            self.learned_emb_dim = text_dim
-        elif emb_mod == 'mean':
-            pass
         self.prop_edge = EventMessagePassingEdge(h_dim,h_dim,h_dim,n_label, bias=True,
                                                 activation=F.relu, dropout=dropout,device=self.device)
         self.prop_node1 = EventMessagePassingNode(h_dim,h_dim,activation=F.relu, dropout=dropout,device=self.device)
@@ -103,7 +49,7 @@ class multilevel_learning(nn.Module):
         self.sent_attn2_list = nn.ModuleList([nn.Linear(h_dim,1) for i in range(self.n_label)])
         self.doc_bi_nn = nn.Bilinear(emb_dim,h_dim,1,bias=False)
     
-    def forward(self, time_set, loc_set, ent_embeds, rel_embeds, graph_dict, text_dict, count_dict, doc_embeds, doc_emb_list, time_of_locs):
+    def forward(self, time_set, loc_set, ent_embeds, rel_embeds, graph_dict, text_dict, count_dict, doc_embeds, time_of_locs):
         key_list = []
         len_non_zero = []
         nonzero_idx = torch.nonzero(time_set, as_tuple=False).view(-1)
@@ -147,10 +93,7 @@ class multilevel_learning(nn.Module):
             day_idx.append([u_doc_ids[i].index(v) for v in row])
          
        
-        if self.emb_mod == 'mean':
-            doc_embeds = doc_embeds[u_doc_ids_day].cpu()
-        elif self.emb_mod == 'lstm':
-            doc_embeds = self.DocEmbLearning(doc_emb_list[u_doc_ids_day]).cpu()
+        doc_embeds = doc_embeds[u_doc_ids_day].cpu()
         u_doc_by_day = torch.split(doc_embeds, u_docs_len)
         max_doc_day = max(u_docs_len)
         doc_emb_by_day = torch.zeros(len(u_docs_len),max_doc_day,doc_embeds.size(-1))
@@ -203,7 +146,7 @@ class multilevel_learning(nn.Module):
         embed_seq_tensor = self.dropout(embed_seq_tensor)
         return embed_seq_tensor, len_non_zero
  
-    def explain(self, time_set, loc_set, ent_embeds, rel_embeds, graph_dict, text_dict, count_dict, doc_embeds, doc_emb_list, time_of_locs, ref_embeds, label_idx):
+    def explain(self, time_set, loc_set, ent_embeds, rel_embeds, graph_dict, text_dict, count_dict, doc_embeds, time_of_locs, ref_embeds, label_idx):
         key_list = []
         len_non_zero = []
         nonzero_idx = torch.nonzero(time_set, as_tuple=False).view(-1)
@@ -248,10 +191,7 @@ class multilevel_learning(nn.Module):
             day_idx.append([u_doc_ids[i].index(v) for v in row])
 
         with torch.no_grad():
-            if self.emb_mod == 'mean':
-                doc_embeds = doc_embeds[u_doc_ids_day].cpu()
-            elif self.emb_mod == 'lstm':
-                doc_embeds = self.DocEmbLearning(doc_emb_list[u_doc_ids_day]).cpu()
+            doc_embeds = doc_embeds[u_doc_ids_day].cpu()
         ref_embeds = ref_embeds.view(-1, 1, ref_embeds.size(-1)).to(torch.device('cpu'))
 
         u_doc_by_day = torch.split(doc_embeds, u_docs_len)

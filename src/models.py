@@ -34,7 +34,6 @@ class CMF(nn.Module):
         self.multiclass = multiclass
         self.text_dict = None
         self.count_dict = None
-        self.doc_emb_list = None
         self.sent_embs_dict = None
         self.graph_dict = None
         self.time_of_locs = None # available time for each location, a list of list
@@ -90,7 +89,6 @@ class CMF(nn.Module):
                                     self.text_dict,
                                     self.count_dict,
                                     self.doc_embeds,
-                                    self.doc_emb_list,
                                     self.time_of_locs)
         packed_input = torch.nn.utils.rnn.pack_padded_sequence(embed_seq_tensor,
                                                             len_non_zero,
@@ -110,7 +108,6 @@ class CMF(nn.Module):
                                     self.text_dict,
                                     self.count_dict,
                                     self.doc_embeds,
-                                    self.doc_emb_list,
                                     self.time_of_locs)
         packed_input = torch.nn.utils.rnn.pack_padded_sequence(embed_seq_tensor,
                                                             len_non_zero,
@@ -160,7 +157,6 @@ class CMF(nn.Module):
                                                         self.text_dict,
                                                         self.count_dict,
                                                         self.doc_embeds,
-                                                        self.doc_emb_list,
                                                         self.time_of_locs,
                                                         ref_embeds, label_idx)
 
@@ -185,7 +181,6 @@ class CMF(nn.Module):
         if self.multiclass:
             _, pred_label = torch.max(pred, dim = -1)
             _, x_pred_label = torch.max(x_pred, dim = -1)
-            # loss = - mutual_information(pred_label, x_pred_label)  
             loss = - mutual_infomation_loss(pred_label, x_pred_label)  
             
             r['label'] = 'multiclass'
@@ -201,7 +196,6 @@ class CMF(nn.Module):
             x_pred_label = (x_pred > 0.5).float() * 1
             x = pred_label[:,label_idx]
             y1 = x_pred_label[:,label_idx]
-            # loss = - mutual_information(x, y1) # + doc_entropy + evt_entropy
             loss = - mutual_infomation_loss(x, y1)  
 
             r['label'] = 'multilabel' + str(label_idx)

@@ -40,7 +40,6 @@ parser.add_argument("-w","--weight_loss", action="store_true", help='')
 parser.add_argument("--n_evt", type=int, default=20, help='')
 parser.add_argument("-m","--model", type=str, default='cmf', help='')
 parser.add_argument("--spl", action="store_true", help='down sampling popular labels')
-# parser.add_argument("--emb_mod", default='mean', help='lstm/mean/max')
 parser.add_argument("--eid", type=int, default=-1, help='one type of event')
 parser.add_argument("-nl","--node_layer", type=int, default=1, help='')
 parser.add_argument("-td","--textdim", type=int, default=64, help='')
@@ -82,10 +81,7 @@ class_weight = data_dict['class_weight'].to(device)
 train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=args.batch_size, shuffle=False)
 test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
-with open('../data/{}/loc_text_emb_list.pkl'.format(args.dataset), 'rb') as f:
-    doc_emb_list = pickle.load(f)
-    doc_emb_list = np.array(doc_emb_list,dtype=object)
-
+ 
 with open('../data/{}/loc_text_emb.pkl'.format(args.dataset), 'rb') as f:
     doc_embeds = pickle.load(f)
 doc_embeds = torch.FloatTensor(doc_embeds)
@@ -103,22 +99,19 @@ def prepare(args):
     if args.model == 'cmf':
         model = CMF(args.n_hidden, data_dict['num_ents'], data_dict['num_rels'], num_class=data_dict['num_class'], seq_len=args.seq_len, 
                         use_gru=args.use_gru,maxpool=args.maxpool, class_weight=class_weight,weight_loss=args.weight_loss, 
-                        n_label=args.n_evt, emb_dim=300,device=device, multiclass=args.multiclass,emb_mod=args.emb_mod,node_layer=args.node_layer,text_dim=args.textdim)
-        model.doc_emb_list = doc_emb_list # might remove this
+                        n_label=args.n_evt, emb_dim=300,device=device, multiclass=args.multiclass,emb_mod='mean',node_layer=args.node_layer,text_dim=args.textdim)
         model.count_dict = data_dict['count_dict'] 
         model.text_dict = data_dict['text_dict'] 
         model.doc_embeds = doc_embeds 
      
     model_name = model.__class__.__name__
-    token = model_name + 'lr'+str(args.lr) + 'wd'+str(args.weight_decay) + 'dp' + str(args.dropout) + 'sl' + str(args.seq_len) + 'h' + str(args.horizon) + 'hd' + str(args.n_hidden) + 'p'+str(args.patience) + 'tr'+str(args.train)
+    token = model_name + 'lr'+str(args.lr) + 'wd'+str(args.weight_decay) + 'dp' + str(args.dropout) + 'sl' + str(args.seq_len) + 'h' + str(args.horizon) + 'hd' + str(args.n_hidden) + 'p'+str(args.patience) + 'tr'+str(args.train) 
     if args.shuffle:
         token += '-s'
     if args.weight_loss:
         token += '-wl'
     if args.spl:
         token += '-sp'
-    if args.model in ['xevent5','xevent7','xevent8','xevent9','x10','x102']:
-        token += '-'+args.emb_mod
     if args.eid >= 0:
         token += '-e'+str(args.eid)
     if args.model in ['cmf'] and args.node_layer > 1:

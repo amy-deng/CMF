@@ -41,7 +41,6 @@ parser.add_argument("-w","--weight_loss", action="store_true", help='')
 parser.add_argument("--n_evt", type=int, default=20, help='')
 parser.add_argument("-m","--model", type=str, default='cmf', help='')
 parser.add_argument("--spl", action="store_true", help='down sampling popular labels')
-parser.add_argument("--emb_mod", default='mean', help='lstm/mean/max')
 parser.add_argument("--eid", type=int, default=-1, help='one type of event')
 parser.add_argument("-nl","--node_layer", type=int, default=1, help='')
 parser.add_argument("-td","--textdim", type=int, default=64, help='')
@@ -87,10 +86,6 @@ n_labels = data_dict['num_class']
 if args.multiclass:
     n_labels = 1
 
-with open('../data/{}/loc_text_emb_list.pkl'.format(args.dataset), 'rb') as f:
-    doc_emb_list = pickle.load(f)
-    doc_emb_list = np.array(doc_emb_list,dtype=object)
-
 with open('../data/{}/loc_text_emb.pkl'.format(args.dataset), 'rb') as f:
     doc_embeds = pickle.load(f)
 doc_embeds = torch.FloatTensor(doc_embeds)
@@ -107,8 +102,7 @@ def prepare(args):
     if args.model == 'cmf':
         model = CMF(args.n_hidden, data_dict['num_ents'], data_dict['num_rels'], num_class=data_dict['num_class'], seq_len=args.seq_len, 
                         use_gru=args.use_gru,maxpool=args.maxpool, class_weight=class_weight,weight_loss=args.weight_loss, 
-                        n_label=args.n_evt, emb_dim=300,device=device, multiclass=args.multiclass,emb_mod=args.emb_mod,node_layer=args.node_layer)
-        model.doc_emb_list = doc_emb_list # might remove this
+                        n_label=args.n_evt, emb_dim=300,device=device, multiclass=args.multiclass,emb_mod='mean',node_layer=args.node_layer)
         model.count_dict = data_dict['count_dict'] 
         model.text_dict = data_dict['text_dict'] 
         model.doc_embeds = doc_embeds 
@@ -121,8 +115,6 @@ def prepare(args):
         token += '-wl'
     if args.spl:
         token += '-spl'
-    if args.model in ['cmf']:
-        token += '-'+args.emb_mod
     if args.eid >= 0:
         token += '-e'+str(args.eid)
     if args.model in ['cmf'] and args.node_layer > 1:
@@ -131,8 +123,7 @@ def prepare(args):
         token += '-los'
     if args.textdim != 64:
         token += '-td'+str(args.textdim)
-    # if args.fl >= 0:
- 
+  
     token = token+'-x'
     
     print('model:', model_name)
@@ -235,31 +226,23 @@ def evaluate(data_loader, data, set_name='val'):
     y_list = []
     raw_pred_list = []
     raw_y_list = []
-    # true_rank_l, prob_rank_l = [], []
     for i, batch in enumerate(data_loader):
         time_set, loc_set, y = batch
-        # time_set = torch.stack(time_set, dim=0)
         loss, pred, y,_  = model(time_set, loc_set, y) 
         total_loss += loss.item()
         raw_pred_list +=  pred.cpu().tolist()
         raw_y_list += y.cpu().tolist() 
         if data_dict['num_class'] > 1:
-        # print(pred.shape,'pred',pred.view(-1))
-        # print(y.shape,'y',y.view(-1))
             true_rank, prob_rank = model.evaluate(pred, y)
             pred_list +=  prob_rank
             y_list += true_rank
-        # print(true_rank ,'true_rank')
-        # print(prob_rank ,'prob_rank') 
         
     reduced_loss = total_loss / (data.len / args.batch_size)
     
     if data_dict['num_class'] > 1:
         eval_dict = evaluation_metrics(y_list, pred_list, raw_y_list, raw_pred_list, args.metric,args.multiclass)  
-        # print('eval_dict 1',eval_dict)
     else:
         eval_dict = evaluation_bi_metrics(raw_y_list, raw_pred_list) 
-        # print('eval_dict b',eval_dict)
 
     t1 = time.time()
     # print("Valid Epoch {:03d} | Loss {:.6f} | time {:.2f}".format(

@@ -4,7 +4,7 @@ This is the source code for paper [Understanding Event Predictions via Contextua
 
 
 ## Data
-We processed some country based datasets from the ICEWS data. Please find example datasets in this [Google Drive Link](https://drive.google.com/drive/folders/1e26qEbrLRiOTlg-navs7AjFldeBfDRz7?usp=sharing). A brief introduction of the data file is as follows:
+We processed some country based datasets from the ICEWS data. Please find example datasets in this [Google Drive Link](https://drive.google.com/drive/folders/1WKdTOE5tGSBUHE5xAY4dwImQ3uU2N_7R?usp=sharing). A brief introduction of the data file is as follows:
 - `loc2id.txt` location to id mapping (several locations are considered for each country).
 - `loc_entity2id.txt` entity to id mapping.
 - `data_count.pkl` event count data
